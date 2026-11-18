@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Background player</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#000}
+canvas{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center}
+#hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font:600 15px system-ui,sans-serif;padding:10px 18px;border-radius:999px;transition:opacity .4s;pointer-events:none;white-space:nowrap}
+#bar{position:fixed;left:16px;top:16px;display:flex;gap:8px;transition:opacity .4s}
+#bar button,#bar label{font:600 14px system-ui,sans-serif;background:#fff;color:#14206e;border:0;border-radius:999px;padding:8px 14px;cursor:pointer}
+body.idle{cursor:none}body.idle #hint,body.idle #bar,body.fs #hint,body.fs #bar,body.still #hint,body.still #bar{opacity:0;pointer-events:none}
+</style></head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<div id="hint">Click for full screen · Esc to exit</div>
+<div id="bar" hidden><label>Add photos<input id="pick" type="file" accept="image/*" multiple hidden></label><button id="clear">Clear photos</button></div>
+<script src="classes.js"></script>
+<script src="engine.js"></script>
+<script>
+// hash: #ps2-1   or   #ps2-1@30  (frozen at t=30 s, for screenshots / video capture)
+const [id,tFix]=decodeURIComponent(location.hash.slice(1)).split('@');
+const cls=BIS_CLASSES.find(c=>id&&id.startsWith(c.id+'-'))||BIS_CLASSES[1];
+if(window.top!==window.self)document.getElementById('hint').hidden=true;
+const still=tFix!=null&&tFix!=='';if(still)document.body.classList.add('still');
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+function fit(){const s=Math.max(innerWidth/1920,innerHeight/1080);cv.style.transform=`translate(-50%,-50%) scale(${s})`}
+addEventListener('resize',fit);fit();
+// full screen: click or F enters; Esc (or F) exits. Clicks never exit, so a stray click on show day is harmless.
+function enterFs(){if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{})}
+addEventListener('click',e=>{if(!e.target.closest('#bar'))enterFs()});
+addEventListener('keydown',e=>{if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():enterFs()}});
+document.addEventListener('fullscreenchange',()=>document.body.classList.toggle('fs',!!document.fullscreenElement));
+let idleT;function wake(){document.body.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>document.body.classList.add('idle'),2500)}
+addEventListener('mousemove',wake);wake();
+
+const s=document.createElement('script');s.src='scenes/'+cls.id+'.js';
+s.onload=()=>{const def=BIS.scenes[id]||BIS.scenes[cls.id+'-1'];
+  let seed=0;for(const ch of id)seed=seed*31+ch.charCodeAt(0)|0;
+  const S=BIS.api(ctx,cls.dur,seed);if(def.setup)def.setup(S);
+  if(cls.photos)initPhotos(S);
+  const t0=performance.now();
+  function frame(now){const t=still?(+tFix%cls.dur):((now-t0)/1000)%cls.dur;
+    S.now=still?+tFix:(now-t0)/1000;S.t=t;S.p=t/cls.dur;
+    ctx.save();def.draw(S);ctx.restore();if(!still)requestAnimationFrame(frame)}
+  requestAnimationFrame(frame)};
+document.head.appendChild(s);
+
+// Grade 0: photos are kept only in this browser (IndexedDB), never uploaded.
+function initPhotos(S){const bar=document.getElementById('bar');bar.hidden=false;
+  const DB='bis-show-photos';let db;
+  const open=()=>new Promise(r=>{try{const q=indexedDB.open(DB,1);q.onupgradeneeded=()=>q.result.createObjectStore('p',{autoIncrement:true});q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
+  const add=async files=>{for(const f of files){if(!f.type.startsWith('image/'))continue;try{S.photos.push(await createImageBitmap(f))}catch(e){}
+    try{db&&db.transaction('p','readwrite').objectStore('p').add(f)}catch(e){}}};
+  open().then(d=>{db=d;if(!db)return;try{const q=db.transaction('p').objectStore('p').getAll();q.onsuccess=async()=>{for(const b of q.result){try{S.photos.push(await createImageBitmap(b))}catch(e){}}}}catch(e){}});
+  document.getElementById('pick').onchange=e=>add([...e.target.files]);
+  document.getElementById('clear').onclick=()=>{S.photos.length=0;try{db&&db.transaction('p','readwrite').objectStore('p').clear()}catch(e){}};
+  addEventListener('dragover',e=>e.preventDefault());addEventListener('drop',e=>{e.preventDefault();add([...e.dataTransfer.files])});
+}
+</script>
+</body></html>

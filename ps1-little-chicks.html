@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Little Chicks — background loop</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#4aa8f5;cursor:none}
+  #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;
+    background:linear-gradient(#62dafc 0%,#56c3fa 55%,#4aa6f4 100%)}
+  .layer{position:absolute;left:0;top:0}
+  svg{display:block;overflow:visible}
+  /* earth: one full turn = 120 s = song length, so the loop is seamless */
+  #planetWrap{position:absolute;width:2300px;height:2300px;left:-190px;top:850px;
+    animation:spin 120s linear infinite;will-change:transform}
+  @keyframes spin{to{transform:rotate(-360deg)}}
+
+  .cloud{animation:drift linear infinite}
+  @keyframes drift{from{transform:translateX(-500px)}to{transform:translateX(2420px)}}
+
+  .bird{animation:fly linear infinite}
+  @keyframes fly{0%{transform:translate(-120px,0)}25%{transform:translate(400px,-30px)}50%{transform:translate(1000px,10px)}
+    75%{transform:translate(1550px,-25px)}100%{transform:translate(2080px,0)}}
+  .wing{animation:flap .55s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 100%}
+  @keyframes flap{from{transform:scaleY(1.1)}to{transform:scaleY(.3)}}
+
+  .rays{animation:rays 40s linear infinite;transform-origin:640px 140px}
+  @keyframes rays{to{transform:rotate(360deg)}}
+  .sunface{animation:breathe 4s ease-in-out infinite;transform-origin:640px 140px}
+  @keyframes breathe{50%{transform:scale(1.05)}}
+
+  .hop{animation:hop 1s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+  @keyframes hop{0%,100%{transform:translateY(0) scale(1.05,.95)}
+    35%{transform:translateY(-22px) scale(.95,1.06)}55%{transform:translateY(-22px) scale(.97,1.03)}
+    85%{transform:translateY(0) scale(1.06,.94)}}
+  .peck{animation:peck 1.6s ease-in-out infinite;transform-box:fill-box;transform-origin:30% 100%}
+  @keyframes peck{0%,40%,100%{transform:rotate(0)}55%{transform:rotate(28deg)}65%{transform:rotate(10deg)}75%{transform:rotate(28deg)}88%{transform:rotate(0)}}
+  .wiggle{animation:wiggle 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+  @keyframes wiggle{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+  .sway{animation:wiggle 3.5s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+  .note{animation:note 4s ease-out infinite}
+  @keyframes note{0%{transform:translate(0,0);opacity:0}15%{opacity:1}100%{transform:translate(40px,-160px);opacity:0}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <svg id="sky" class="layer" width="1920" height="1080" viewBox="0 0 1920 1080"></svg>
+  <div id="planetWrap"><svg id="planet" width="2300" height="2300" viewBox="0 0 2300 2300"></svg></div>
+</div>
+<script>
+/* ---------- helpers ---------- */
+const NS='http://www.w3.org/2000/svg';
+let seed=7;function rnd(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+const R=(a,b)=>a+rnd()*(b-a);
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);for(const k in attrs)e.setAttribute(k,attrs[k]);if(parent)parent.appendChild(e);return e}
+const INK='#1c1c1c';
+
+// smooth closed path through points (Catmull-Rom → Bezier)
+function smooth(pts,closed=true){
+  const n=pts.length;let d=`M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  const g=i=>closed?pts[(i+n)%n]:pts[Math.max(0,Math.min(n-1,i))];
+  for(let i=0;i<(closed?n:n-1);i++){const p0=g(i-1),p1=g(i),p2=g(i+1),p3=g(i+2);
+    d+=` C${(p1[0]+(p2[0]-p0[0])/6).toFixed(1)},${(p1[1]+(p2[1]-p0[1])/6).toFixed(1)} ${(p2[0]-(p3[0]-p1[0])/6).toFixed(1)},${(p2[1]-(p3[1]-p1[1])/6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`}
+  return d+(closed?'Z':'')}
+// wobbly blob; bumps>0 gives cloud/bush/tree-crown edges
+function blob(cx,cy,rx,ry,{bumps=0,amp=0,jit=.03,n=48,rot=0}={}){
+  const pts=[];const ph=R(0,6.28);
+  for(let i=0;i<n;i++){const t=i/n*Math.PI*2;let k=1+R(-jit,jit);
+    if(bumps)k+=amp*Math.pow(Math.abs(Math.sin(t*bumps/2+ph)),.6);
+    pts.push([cx+Math.cos(t+rot)*rx*k,cy+Math.sin(t+rot)*ry*k])}
+  return smooth(pts)}
+// crayon line: wobbly polyline
+function wline(x1,y1,x2,y2,j=2){const pts=[];for(let i=0;i<=4;i++){const t=i/4;pts.push([x1+(x2-x1)*t+R(-j,j),y1+(y2-y1)*t+R(-j,j)])}return smooth(pts,false)}
+// shape = fill + bold ink outline + thin second pass (hand-drawn double line)
+function shape(parent,d,fill,{w=6,second=true,d2=null}={}){
+  el('path',{d,fill,stroke:INK,'stroke-width':w,'stroke-linejoin':'round','stroke-linecap':'round'},parent);
+  if(second&&d2)el('path',{d:d2,fill:'none',stroke:INK,'stroke-width':w*.35,opacity:.55,'stroke-linecap':'round'},parent)}
+
+// crayon fill patterns (base colour + scribbles)
+function hatch(svg,id,base,marks,size=46,count=9,wid=3){
+  let defs=svg.querySelector('defs')||el('defs',{},svg);
+  const p=el('pattern',{id,width:size,height:size,patternUnits:'userSpaceOnUse'},defs);
+  el('rect',{width:size,height:size,fill:base},p);
+  for(let i=0;i<count;i++){const x=R(0,size),y=R(0,size),l=R(6,16),a=R(-.5,.2);
+    el('line',{x1:x,y1:y,x2:x+Math.cos(a)*l,y2:y+Math.sin(a)*l,stroke:marks[i%marks.length],'stroke-width':wid,'stroke-linecap':'round',opacity:.75},p)}
+  return `url(#${id})`}
+
+/* ---------- SKY ---------- */
+const sky=document.getElementById('sky');
+const sunFill=hatch(sky,'sunH','#ffe12e',['#ffd000','#fff27a','#ffc400'],30,10,3);
+
+// sun (top-left like the reference)
+const rays=el('g',{class:'rays'},sky);
+for(let i=0;i<14;i++){const a=i/14*Math.PI*2+R(-.08,.08),r1=R(105,120),r2=R(165,215);
+  el('path',{d:wline(640+Math.cos(a)*r1,140+Math.sin(a)*r1,640+Math.cos(a)*r2,140+Math.sin(a)*r2,3),stroke:'#ffd400','stroke-width':R(7,11),'stroke-linecap':'round',fill:'none'},rays)}
+const face=el('g',{class:'sunface'},sky);
+el('path',{d:blob(640,140,92,86,{jit:.04}),fill:sunFill,stroke:'#f5b800','stroke-width':6},face);
+el('path',{d:blob(640,140,84,80,{jit:.05}),fill:'none',stroke:'#ffef8a','stroke-width':3,opacity:.8},face);
+el('path',{d:'M598,118 q12,-12 24,0',stroke:'#6b2a12','stroke-width':6,fill:'none','stroke-linecap':'round'},face);
+el('path',{d:'M660,118 q12,-12 24,0',stroke:'#6b2a12','stroke-width':6,fill:'none','stroke-linecap':'round'},face);
+el('path',{d:'M590,148 Q640,215 694,146 Q640,170 590,148Z',fill:'#8b2d12',stroke:'#6b2a12','stroke-width':5,'stroke-linejoin':'round'},face);
+el('ellipse',{cx:590,cy:150,rx:12,ry:8,fill:'#ff9a3c',opacity:.6},face);
+el('ellipse',{cx:694,cy:150,rx:12,ry:8,fill:'#ff9a3c',opacity:.6},face);
+
+// clouds: white outline only, as in the picture
+function cloud(y,s,dur,delay){
+  const g=el('g',{class:'cloud',style:`animation-duration:${dur}s;animation-delay:${-delay}s`},sky);
+  const inner=el('g',{transform:`translate(0,${y}) scale(${s})`},g);
+  const d=blob(0,0,150,62,{bumps:5,amp:.45,jit:.02,n:70});
+  el('path',{d,fill:'rgba(255,255,255,.18)',stroke:'#fff','stroke-width':9/s+2,'stroke-linejoin':'round'},inner);
+  el('path',{d:blob(4,-3,140,58,{bumps:5,amp:.4,jit:.03,n:60}),fill:'none',stroke:'#fff','stroke-width':3,opacity:.7},inner);
+}
+cloud(150,1.2,140,10);cloud(330,.75,110,60);cloud(520,.55,90,20);cloud(240,.9,160,95);cloud(440,.45,80,55);cloud(110,1.0,150,130);
+
+// birds
+function bird(y,s,dur,delay){
+  const g=el('g',{class:'bird',style:`animation-duration:${dur}s;animation-delay:${-delay}s`},sky);
+  const i=el('g',{transform:`translate(0,${y}) scale(${s})`},g);
+  el('path',{class:'wing',d:'M-26,0 Q-13,-14 0,0 Q13,-14 26,0',fill:'none',stroke:INK,'stroke-width':5,'stroke-linecap':'round','stroke-linejoin':'round',style:`animation-delay:${-R(0,1)}s`},i)}
+bird(260,1.6,38,0);bird(420,1.3,44,12);bird(470,1.1,40,25);bird(190,1.9,50,33);
+
+/* ---------- PLANET ---------- */
+const P=document.getElementById('planet');
+const CX=1150,CY=1150,RAD=1150;
+const grassL=hatch(P,'gL','#9ed92c',['#c4f046','#7fbf1e','#b3e63a'],50,10,4);
+const grassD=hatch(P,'gD','#2f8a25',['#3fa32e','#237019','#4cae35'],60,12,4);
+const leaf=hatch(P,'lf','#8fdc1e',['#b6f03c','#6cbf12','#58b0e8'],40,10,3);
+const bushF=hatch(P,'bu','#5a64d6',['#7a84ea','#4650c0','#8890f0'],40,10,3);
+const chickF=hatch(P,'ch','#ffd93b',['#ffe97a','#ffc61a','#fff3a6'],26,9,2.5);
+const henF=hatch(P,'hn','#fff6e6',['#f3e2c4','#ffffff','#ead3ae'],34,9,3);
+const strawF=hatch(P,'st','#e8b84a',['#c99320','#f5d071','#b88218'],22,10,2.5);
+
+const back=el('g',{},P), ground=el('g',{},P), front=el('g',{},P);
+// ground disc: light rim + darker inner band (like the reference)
+shape(ground,blob(CX,CY,RAD,RAD,{jit:.002,n:160}),grassL,{w:7});
+el('path',{d:blob(CX,CY,RAD-55,RAD-55,{jit:.003,n:160}),fill:grassD,stroke:'#6fc322','stroke-width':10},ground);
+el('path',{d:blob(CX,CY,RAD-190,RAD-190,{jit:.003,n:160}),fill:'#1f6d1c',stroke:'#9ed92c','stroke-width':8},ground);
+el('path',{d:blob(CX,CY,RAD-20,RAD-20,{jit:.003,n:160}),fill:'none',stroke:'#d6ff6a','stroke-width':4,opacity:.7,'stroke-dasharray':'60 40 20 50'},ground);
+
+// place a group at angle a (deg) on the surface; local y<0 is "up"
+function at(layer,a,lift=0){return el('g',{transform:`rotate(${a} ${CX} ${CY}) translate(${CX} ${CY-RAD+lift})`},layer)}
+
+function bush(a,s){const g=at(back,a,12);const i=el('g',{transform:`scale(${s})`},g);
+  shape(i,blob(0,-70,130,85,{bumps:6,amp:.35,jit:.02,n:70}),bushF,{w:6})}
+function tree(a,s,tall){const g=at(back,a,8);const sw=el('g',{class:'sway',style:`animation-delay:${-R(0,3)}s`},g);const i=el('g',{transform:`scale(${s})`},sw);
+  const h=tall?260:110;
+  el('path',{d:`M-12,0 L-6,${-h} L8,${-h} L14,0Z`,fill:'#b3412a',stroke:INK,'stroke-width':5,'stroke-linejoin':'round'},i);
+  el('path',{d:wline(0,-10,2,-h+10,2),stroke:'#7d2a18','stroke-width':3,fill:'none'},i);
+  const cy=-h-110;shape(i,blob(0,cy,150,135,{bumps:7,amp:.28,jit:.02,n:80}),leaf,{w:7,d2:blob(3,cy+2,140,126,{bumps:7,amp:.25,jit:.03,n:70})});
+  for(let k=0;k<4;k++)el('path',{d:`M${R(-90,60)},${cy+R(-70,70)} q14,-10 26,0`,stroke:INK,'stroke-width':4,fill:'none','stroke-linecap':'round'},i)}
+function flower(a,s){const g=at(front,a,R(20,70));const w=el('g',{class:'wiggle',style:`animation-delay:${-R(0,2.4)}s;animation-duration:${R(2,3.2)}s`},g);const i=el('g',{transform:`scale(${s})`},w);
+  const c=['#ffe02a','#ff5a3c','#ff7a2a','#ffffff','#ff8fc8'][Math.floor(R(0,5))];
+  el('path',{d:wline(0,0,R(-6,6),-70,3),stroke:'#1f5a14','stroke-width':6,fill:'none','stroke-linecap':'round'},i);
+  el('path',{d:'M0,-30 q18,-14 30,-4 q-14,12 -30,4Z',fill:'#2f8a25',stroke:'#1f5a14','stroke-width':3},i);
+  if(R(0,1)<.5){shape(i,blob(0,-88,28,26,{bumps:5,amp:.5,jit:.03}),c,{w:4});el('path',{d:'M-10,-92 q8,10 16,-2 M-4,-80 q6,-6 12,2',stroke:c==='#ffffff'?'#e8a000':'#a0281a','stroke-width':3,fill:'none'},i)}
+  else{for(let k=0;k<6;k++){const t=k/6*6.28;el('path',{d:wline(0,-88,Math.cos(t)*24,-88+Math.sin(t)*24,2),stroke:c==='#ffffff'?'#ff5a3c':c,'stroke-width':7,'stroke-linecap':'round',fill:'none'},i)}
+    el('circle',{cx:0,cy:-88,r:6,fill:'#ffb000'},i)}}
+function tuft(a){const g=at(front,a,R(4,30));const x=0;
+  el('path',{d:`M${x-12},0 q2,-22 -6,-34 M${x},0 q0,-26 4,-40 M${x+12},0 q4,-18 14,-28`,stroke:'#cdf55a','stroke-width':4,fill:'none','stroke-linecap':'round'},g)}
+
+// little chick (faces right; flip with dir=-1)
+function chick(layer,a,s=1,dir=1,mode){
+  const g=at(layer,a,R(10,26));const f=el('g',{transform:`scale(${s*dir},${s})`},g);
+  mode=mode||(R(0,1)<.6?'hop':'peck');
+  const b=el('g',{class:mode,style:`animation-delay:${-R(0,2)}s;animation-duration:${mode==='hop'?R(.8,1.2):R(1.4,2)}s`},f);
+  el('path',{d:'M-8,-14 L-10,0 M-10,0 l-8,2 M-10,0 l6,3 M8,-14 L8,0 M8,0 l-6,3 M8,0 l8,2',stroke:'#ff8a00','stroke-width':5,'stroke-linecap':'round',fill:'none'},b);
+  shape(b,blob(0,-40,32,28,{jit:.04}),chickF,{w:5});
+  shape(b,blob(18,-74,21,20,{jit:.05}),chickF,{w:5});
+  el('path',{d:'M14,-94 q-2,-12 6,-14 M20,-94 q4,-10 12,-8',stroke:INK,'stroke-width':3.5,fill:'none','stroke-linecap':'round'},b);
+  el('path',{d:'M36,-78 L52,-72 L36,-66Z',fill:'#ff8a00',stroke:INK,'stroke-width':3.5,'stroke-linejoin':'round'},b);
+  el('circle',{cx:26,cy:-78,r:4.5,fill:INK},b);el('circle',{cx:27.5,cy:-79.5,r:1.6,fill:'#fff'},b);
+  el('ellipse',{cx:22,cy:-66,rx:6,ry:4,fill:'#ff8fa0',opacity:.8},b);
+  el('path',{d:'M-14,-46 q10,18 26,4',stroke:INK,'stroke-width':4,fill:'none','stroke-linecap':'round'},b);
+  el('path',{d:'M-30,-46 l-12,-6 M-31,-40 l-12,0',stroke:INK,'stroke-width':3.5,'stroke-linecap':'round'},b);
+}
+// mother hen
+function hen(a,dir=1){
+  const g=at(front,a,22);const f=el('g',{transform:`scale(${dir},${Math.abs(dir)})`},g);
+  const b=el('g',{class:'wiggle',style:'animation-duration:3s'},f);
+  el('path',{d:'M-14,-18 L-16,0 M-16,0 l-12,3 M-16,0 l8,4 M14,-18 L14,0 M14,0 l-8,4 M14,0 l12,3',stroke:'#ff8a00','stroke-width':6,'stroke-linecap':'round',fill:'none'},b);
+  // tail
+  [[-150,'#f0d9b0'],[-125,'#fff6e6'],[-100,'#f0d9b0']].forEach(([r,c])=>{
+    const t=el('g',{transform:`translate(-58,-82) rotate(${r})`},b);
+    shape(t,blob(48,0,52,19,{jit:.05}),c,{w:5})});
+  shape(b,blob(0,-70,72,56,{jit:.03}),henF,{w:6,d2:blob(2,-68,66,51,{jit:.04})});
+  const head=el('g',{class:'peck',style:'animation-duration:2.6s'},b);
+  shape(head,blob(56,-128,30,32,{jit:.04}),henF,{w:5});
+  shape(head,'M40,-156 q2,-20 12,-10 q4,-18 14,-6 q8,-14 14,2 q4,8 -6,12Z','#ff3b2a',{w:4});
+  el('path',{d:'M82,-132 L104,-124 L82,-116Z',fill:'#ffa600',stroke:INK,'stroke-width':4,'stroke-linejoin':'round'},head);
+  shape(head,'M78,-114 q8,14 -2,22 q-10,-6 -4,-22Z','#ff3b2a',{w:3.5});
+  el('circle',{cx:66,cy:-134,r:5,fill:INK},head);el('circle',{cx:67.5,cy:-135.5,r:1.8,fill:'#fff'},head);
+  el('ellipse',{cx:60,cy:-118,rx:7,ry:5,fill:'#ff9aa8',opacity:.8},head);
+  el('path',{d:'M-34,-78 q30,40 64,6',stroke:INK,'stroke-width':5,fill:'none','stroke-linecap':'round'},b);
+  el('path',{d:'M-20,-70 q14,14 30,4',stroke:'#d9bf90','stroke-width':4,fill:'none','stroke-linecap':'round'},b);
+}
+// nest with eggs
+function nest(a){const g=at(front,a,26);
+  el('ellipse',{cx:-26,cy:-40,rx:22,ry:28,fill:'#fffaf0',stroke:INK,'stroke-width':4},g);
+  el('ellipse',{cx:22,cy:-44,rx:22,ry:28,fill:'#fff3d9',stroke:INK,'stroke-width':4},g);
+  // a hatching chick in the middle
+  const c=el('g',{class:'wiggle',style:'animation-duration:1.2s'},g);
+  shape(c,blob(0,-52,20,20,{jit:.05}),chickF,{w:4});
+  el('circle',{cx:7,cy:-56,r:3.5,fill:INK},c);el('path',{d:'M16,-54 l10,4 l-10,4Z',fill:'#ff8a00',stroke:INK,'stroke-width':3},c);
+  el('path',{d:'M-20,-38 l8,-8 l8,8 l8,-8 l8,8 l8,-8 l8,8',stroke:INK,'stroke-width':4,fill:'#fffaf0','stroke-linejoin':'round'},c);
+  shape(g,'M-70,-36 Q0,-10 70,-36 Q66,0 0,4 Q-66,0 -70,-36Z',strawF,{w:5});
+  for(let k=0;k<6;k++)el('path',{d:wline(-60+k*22,-24+R(-4,4),-44+k*22,-12+R(-4,4),2),stroke:'#8a5a10','stroke-width':3,fill:'none'},g)}
+// little fence
+function fence(a){const g=at(back,a,10);
+  for(let k=-2;k<=2;k++)el('path',{d:`M${k*34-8},0 L${k*34-8},-70 L${k*34},-84 L${k*34+8},-70 L${k*34+8},0Z`,fill:'#f2c27a',stroke:INK,'stroke-width':4,'stroke-linejoin':'round'},g);
+  el('path',{d:wline(-82,-50,82,-48,2),stroke:INK,'stroke-width':10,fill:'none','stroke-linecap':'round'},g);
+  el('path',{d:wline(-82,-50,82,-48,2),stroke:'#e0a85a','stroke-width':5,fill:'none','stroke-linecap':'round'},g)}
+// floating music notes (it's a song)
+function notes(a){const g=at(front,a,-160);
+  for(let k=0;k<2;k++){const n=el('g',{class:'note',style:`animation-delay:${-k*2}s`},g);
+    el('path',{d:`M${k*40},0 l0,-46 l26,-8 l0,40`,stroke:'#ff5a8a','stroke-width':5,fill:'none','stroke-linecap':'round'},n);
+    el('ellipse',{cx:k*40-7,cy:2,rx:10,ry:7,fill:'#ff5a8a'},n);el('ellipse',{cx:k*40+19,cy:-6,rx:10,ry:7,fill:'#ff5a8a'},n)}}
+
+/* layout around the whole planet (360°) */
+for(let a=0;a<360;a+=R(6,10))bush(a,R(.6,1.1));
+for(let a=4;a<360;a+=R(18,30))tree(a,R(.55,.85),R(0,1)<.45);
+for(let a=12;a<360;a+=R(28,40))fence(a);
+for(let a=0;a<360;a+=R(1.2,2.4))tuft(a);
+for(let a=0;a<360;a+=R(4.5,8))flower(a,R(.6,.9));
+// families: hen leading chicks, every 60°
+for(let k=0;k<6;k++){const a=k*60+8;
+  hen(a,1.25);for(let c=1;c<=4;c++)chick(front,a-5.2*c-R(0,.8),R(1.15,1.35),1);
+  nest(a+22); notes(a+2);
+  chick(front,a+33,R(1.1,1.3),-1,'peck');chick(front,a+37,R(1.1,1.3),1,'hop');chick(front,a+47,R(1.1,1.3),-1)}
+
+/* ---------- fit any screen (cover) ---------- */
+function fit(){const s=Math.max(innerWidth/1920,innerHeight/1080);const st=document.getElementById('stage');
+  st.style.transform=`scale(${s}) translate(-50%,-50%)`;st.style.transformOrigin='0 0';
+  st.style.left='50%';st.style.top='50%';st.style.transform=`translate(-50%,-50%) scale(${s})`;st.style.transformOrigin='center'}
+addEventListener('resize',fit);fit();
+// F or double-click = fullscreen
+function fs(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen()}
+addEventListener('keydown',e=>{if(e.key==='f'||e.key==='F')fs()});addEventListener('dblclick',fs);
+</script>
+</body>
+</html>

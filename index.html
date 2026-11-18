@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>BIS Anniversary Show Backgrounds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap">
+<style>
+/* layout: logo band, then a grid of class cards; class view = three option cards */
+:root{--navy:#18237a;--navy2:#2b3aa8;--gold:#f6c21b;--ink:#141a3d;--muted:#5b6185;--paper:#f6f7fc;--card:#fff;--line:#e2e5f3;
+  --font:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--ink:#eef0ff;--muted:#a6abd0;--paper:#0e1236;--card:#171c4a;--line:#2a3070;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 var(--font)}
+header{background:#fff;border-bottom:4px solid var(--gold)}
+.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header .wrap{display:flex;align-items:center;gap:24px;padding-block:14px;flex-wrap:wrap}
+header img{height:64px;width:auto}
+header .show{margin-left:auto;text-align:right;color:var(--navy)}
+header .show b{display:block;font-size:20px;font-weight:800;line-height:1.2}
+header .show span{font-size:14px;color:#5b6185}
+main{padding-block:28px 48px}
+h1{font-size:clamp(26px,4vw,38px);font-weight:800;margin:0 0 4px;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 24px;max-width:65ch}
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+a.cls{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;color:inherit;text-decoration:none;transition:transform .15s,box-shadow .15s}
+a.cls:hover,a.cls:focus-visible{transform:translateY(-3px);box-shadow:0 10px 24px rgba(24,35,122,.18);outline:none}
+a.cls:focus-visible{outline:3px solid var(--gold)}
+.thumb{aspect-ratio:16/9;background:linear-gradient(135deg,var(--navy),var(--navy2));background-size:cover;background-position:center;max-width:100%}
+.cls .txt{padding:12px 14px 14px;display:grid;gap:2px}
+.cls .name{font-weight:800;font-size:18px}
+.cls .song{color:var(--muted);font-size:14px}
+.tag{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--navy2)}
+@media (prefers-color-scheme:dark){.tag{color:var(--gold)}}
+.back{display:inline-block;margin-bottom:14px;color:var(--navy2);font-weight:700;text-decoration:none}
+@media (prefers-color-scheme:dark){.back{color:var(--gold)}}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--muted);margin:6px 0 22px}
+.meta b{color:var(--ink)}
+.opts{display:grid;gap:20px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.opt{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.opt iframe{display:block;width:100%;aspect-ratio:16/9;border:0;background:#000}
+.opt .txt{padding:12px 14px 14px;display:grid;gap:8px;flex:1}
+.opt h3{margin:0;font-size:18px}
+.opt p{margin:0;color:var(--muted);font-size:14px;min-width:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
+.btn{font:700 15px var(--font);border:0;border-radius:999px;padding:10px 16px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.main{background:var(--navy);color:#fff}.btn.main:hover{background:var(--navy2)}
+.btn.alt{background:transparent;color:var(--ink);border:2px solid var(--line)}
+.btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.how{margin-top:28px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--gold);border-radius:10px;padding:14px 18px;max-width:75ch}
+.how h2{margin:0 0 6px;font-size:17px}.how ol{margin:0;padding-left:20px}
+footer{color:var(--muted);font-size:13px;padding-block:0 32px}
+@media (prefers-reduced-motion:reduce){a.cls{transition:none}}
+</style></head>
+<body>
+<header><div class="wrap">
+  <a href="#"><img src="assets/bis-logo.png" alt="Bishkek International School"></a>
+  <div class="show"><b>17th Anniversary Show</b><span>Pre-show concert · Family, Love and Belonging</span></div>
+</div></header>
+<main class="wrap" id="view"></main>
+<footer class="wrap">Each background loops seamlessly for the length of its song. Original artwork, made for BIS.</footer>
+<script src="classes.js"></script>
+<script>window.BIS={scenes:{},scene(id,d){this.scenes[id]=d}}</script>
+<script>
+const C=window.BIS_CLASSES,view=document.getElementById('view');
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// scene titles/blurbs live in the scene files; load them (definitions only, nothing runs)
+let pending=C.filter(c=>!c.external).length;
+C.forEach(c=>{if(c.external)return;const s=document.createElement('script');s.src='scenes/'+c.id+'.js';s.onload=s.onerror=()=>{if(--pending===0)route()};document.head.appendChild(s)});
+function opts(c){if(c.external)return c.external.map((f,i)=>({src:f,title:'Little Chicks',blurb:'Hand-drawn crayon farm: hens and chicks on a slowly turning little planet.'}));
+  return [1,2,3].map(i=>{const id=c.id+'-'+i,d=BIS.scenes[id]||{};return{src:'play.html#'+id,title:d.title||('Option '+i),blurb:d.blurb||''}})}
+function home(){document.title='BIS Anniversary Show Backgrounds';
+  view.innerHTML=`<h1>Pre-show backgrounds</h1><p class="lede">One page per class, with three background options each. Pick a class, preview the options, and press <b>Full screen</b> to play one on the big screen.</p>
+  <div class="grid">${C.map(c=>`<a class="cls" href="#${c.id}"><div class="thumb" style="background-image:url('thumbs/${c.id}.png')"></div>
+   <div class="txt"><span class="tag">${esc(c.name)}</span><span class="name">${esc(c.song)}</span><span class="song">${esc(c.kind)} · ${mmss(c.dur)}${c.external?' · 1 option':' · 3 options'}</span></div></a>`).join('')}</div>`}
+function cls(c){document.title=c.name+' · BIS Show Backgrounds';
+  const o=opts(c);
+  view.innerHTML=`<a class="back" href="#">← All classes</a><h1>${esc(c.name)}: ${esc(c.song)}</h1>
+  <div class="meta"><span><b>${esc(c.kind)}</b></span><span>Loop length <b>${mmss(c.dur)}</b></span><span>Theme: <b>${esc(c.theme)}</b></span></div>
+  <div class="opts">${o.map((x,i)=>`<div class="opt"><iframe src="${x.src}" title="${esc(x.title)}" allow="fullscreen" allowfullscreen loading="lazy"></iframe>
+   <div class="txt"><span class="tag">Option ${o.length>1?i+1:''}</span><h3>${esc(x.title)}</h3><p>${esc(x.blurb)}</p>
+   <div class="btns"><button class="btn main" data-fs="${i}">▶ Full screen</button><a class="btn alt" href="${x.src}" target="_blank" rel="noopener">Open on its own</a></div></div></div>`).join('')}</div>
+  ${c.photos?`<div class="how"><h2>Adding the photos</h2><p>Click <b>Open on its own</b>, then <b>Add photos</b> (or drag them onto the page). The photos stay in this browser on this computer; nothing is uploaded. They play in the frame, shared evenly across the song.</p></div>`:''}
+  <div class="how"><h2>On the day</h2><ol><li>Open this page on the show laptop and connect the projector.</li><li>Press <b>Full screen</b> on the chosen option. The mouse pointer hides by itself.</li><li>It loops until you press <b>Esc</b>.</li></ol></div>`;
+  view.querySelectorAll('[data-fs]').forEach(b=>b.onclick=()=>{const f=view.querySelectorAll('iframe')[b.dataset.fs];(f.requestFullscreen?f.requestFullscreen():Promise.reject()).catch(()=>window.open(f.src,'_blank'))})}
+function route(){const id=location.hash.slice(1),c=C.find(x=>x.id===id);c?cls(c):home();scrollTo(0,0)}
+addEventListener('hashchange',route);
+</script>
+</body></html>
