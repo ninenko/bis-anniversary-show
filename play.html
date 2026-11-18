@@ -5,6 +5,7 @@
 html,body{margin:0;height:100%;overflow:hidden;background:#000}
 canvas{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center}
 #hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:rgba(0,0,0,.65);color:#fff;font:600 15px system-ui,sans-serif;padding:10px 18px;border-radius:999px;transition:opacity .4s;pointer-events:none;white-space:nowrap}
+#bar[hidden]{display:none}
 #bar{position:fixed;left:16px;top:16px;display:flex;gap:8px;transition:opacity .4s}
 #bar button,#bar label{font:600 14px system-ui,sans-serif;background:#fff;color:#14206e;border:0;border-radius:999px;padding:8px 14px;cursor:pointer}
 body.idle{cursor:none}body.idle #hint,body.idle #bar,body.fs #hint,body.fs #bar,body.still #hint,body.still #bar{opacity:0;pointer-events:none}
@@ -38,8 +39,8 @@ s.onload=()=>{const def=BIS.scenes[id]||BIS.scenes[cls.id+'-1'];
   const S=BIS.api(ctx,cls.dur,seed);if(def.setup)def.setup(S);
   if(cls.photos)initPhotos(S);
   const t0=performance.now();
-  function frame(now){const t=still?(+tFix%cls.dur):((now-t0)/1000)%cls.dur;
-    S.now=still?+tFix:(now-t0)/1000;S.t=t;S.p=t/cls.dur;
+  function frame(now){const el=Math.max(0,(now-t0)/1000),t=still?(+tFix%cls.dur):el%cls.dur;
+    S.now=still?+tFix:el;S.t=t;S.p=t/cls.dur;
     ctx.save();def.draw(S);ctx.restore();if(!still)requestAnimationFrame(frame)}
   requestAnimationFrame(frame)};
 document.head.appendChild(s);
