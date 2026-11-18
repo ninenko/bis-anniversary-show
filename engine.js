@@ -58,7 +58,7 @@ BIS.api=function(ctx,L,seed){
   /* photo window for frame scenes (Grade 0). Uses S.photos (Image/ImageBitmap list).
      Crossfades through them using real time S.now; draws a placeholder if empty. */
   S.photoWindow=(x,y,w,h,rad=24,slideSec)=>{ctx.save();const p=new Path2D();p.roundRect(x,y,w,h,rad);ctx.clip(p);
-    const ph=S.photos;if(!ph.length){ctx.fillStyle='rgba(255,255,255,.18)';ctx.fill(p);ctx.fillStyle='rgba(255,255,255,.85)';ctx.font='600 44px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    const ph=S.photos;if(!ph.length){ctx.fillStyle='rgba(28,36,80,.82)';ctx.fill(p);ctx.fillStyle='rgba(255,255,255,.85)';ctx.font='600 44px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillText('Photo slideshow plays here',x+w/2,y+h/2-26);ctx.font='28px system-ui,sans-serif';ctx.fillText('Click "Add photos" (photos stay on this computer)',x+w/2,y+h/2+28);ctx.restore();return}
     const sec=slideSec||Math.max(4,L/ph.length),k=S.now/sec,i=Math.floor(k)%ph.length,f=frac(k),fade=.8/sec;
     const drawImg=(img,a)=>{if(!img)return;const s=Math.max(w/img.width,h/img.height),iw=img.width*s,ih=img.height*s;ctx.globalAlpha=a;ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih)};

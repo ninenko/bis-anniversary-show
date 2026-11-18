@@ -44,6 +44,12 @@ a.cls:focus-visible{outline:3px solid var(--gold)}
 .btn.main{background:var(--navy);color:#fff}.btn.main:hover{background:var(--navy2)}
 .btn.alt{background:transparent;color:var(--ink);border:2px solid var(--line)}
 .btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.req{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 22px;max-width:900px}
+.req h2{margin:0 0 8px;font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.req dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}
+.req dt{font-weight:800}.req dd{margin:0;min-width:0}
+@media (max-width:520px){.req dl{grid-template-columns:1fr}.req dd{margin-bottom:6px}}
+.opt p.idea{color:var(--ink);font-size:13px;border-top:1px dashed var(--line);padding-top:8px}
 .how{margin-top:28px;background:var(--card);border:1px solid var(--line);border-left:6px solid var(--gold);border-radius:10px;padding:14px 18px;max-width:75ch}
 .how h2{margin:0 0 6px;font-size:17px}.how ol{margin:0;padding-left:20px}
 footer{color:var(--muted);font-size:13px;padding-block:0 32px}
@@ -65,8 +71,8 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 // scene titles/blurbs live in the scene files; load them (definitions only, nothing runs)
 let pending=C.filter(c=>!c.external).length;
 C.forEach(c=>{if(c.external)return;const s=document.createElement('script');s.src='scenes/'+c.id+'.js';s.onload=s.onerror=()=>{if(--pending===0)route()};document.head.appendChild(s)});
-function opts(c){if(c.external)return c.external.map((f,i)=>({src:f,title:'Little Chicks',blurb:'Hand-drawn crayon farm: hens and chicks on a slowly turning little planet.'}));
-  return [1,2,3].map(i=>{const id=c.id+'-'+i,d=BIS.scenes[id]||{};return{src:'play.html#'+id,title:d.title||('Option '+i),blurb:d.blurb||''}})}
+function opts(c){const ideas=c.ideas||[];if(c.external)return c.external.map((f,i)=>({src:f,title:'Little Chicks',blurb:'Approved. Hand-drawn crayon farm: hens and chicks on a slowly turning little planet.',idea:ideas[i]}));
+  return [1,2,3].map(i=>{const id=c.id+'-'+i,d=BIS.scenes[id]||{};return{src:'play.html#'+id,title:d.title||('Option '+i),blurb:d.blurb||'',idea:ideas[i-1]}})}
 function home(){document.title='BIS Anniversary Show Backgrounds';
   view.innerHTML=`<h1>Pre-show backgrounds</h1><p class="lede">One page per class, with three background options each. Pick a class, preview the options, and press <b>Full screen</b> to play one on the big screen.</p>
   <div class="grid">${C.map(c=>`<a class="cls" href="#${c.id}"><div class="thumb" style="background-image:url('thumbs/${c.id}.png')"></div>
@@ -74,9 +80,15 @@ function home(){document.title='BIS Anniversary Show Backgrounds';
 function cls(c){document.title=c.name+' · BIS Show Backgrounds';
   const o=opts(c);
   view.innerHTML=`<a class="back" href="#">← All classes</a><h1>${esc(c.name)}: ${esc(c.song)}</h1>
-  <div class="meta"><span><b>${esc(c.kind)}</b></span><span>Loop length <b>${mmss(c.dur)}</b></span><span>Theme: <b>${esc(c.theme)}</b></span></div>
+  <div class="meta"><span><b>${esc(c.kind)}</b></span><span>Loop length <b>${mmss(c.dur)}</b></span></div>
+  <section class="req"><h2>What was requested</h2><dl>
+   <dt>Song</dt><dd>${esc(c.song)} (${esc(c.kind.toLowerCase())}, ${mmss(c.dur)})</dd>
+   <dt>Theme</dt><dd>${esc(c.theme)}</dd>
+   <dt>Style</dt><dd>${esc(BIS_STYLE[c.style])}</dd>
+   ${c.note?`<dt>Timing</dt><dd>${esc(c.note)}</dd>`:''}
+   <dt>For all</dt><dd>Show theme "Family, Love and Belonging". Original artwork only, with no characters from films or shows. Each background loops seamlessly for the length of the song.</dd></dl></section>
   <div class="opts">${o.map((x,i)=>`<div class="opt"><iframe src="${x.src}" title="${esc(x.title)}" allow="fullscreen" allowfullscreen loading="lazy"></iframe>
-   <div class="txt"><span class="tag">Option ${o.length>1?i+1:''}</span><h3>${esc(x.title)}</h3><p>${esc(x.blurb)}</p>
+   <div class="txt"><span class="tag">Option ${o.length>1?i+1:''}</span><h3>${esc(x.title)}</h3><p>${esc(x.blurb)}</p>${x.idea?`<p class="idea"><b>Built from:</b> ${esc(x.idea)}</p>`:''}
    <div class="btns"><button class="btn main" data-fs="${i}">▶ Full screen</button><a class="btn alt" href="${x.src}" target="_blank" rel="noopener">Open on its own</a></div></div></div>`).join('')}</div>
   ${c.photos?`<div class="how"><h2>Adding the photos</h2><p>Click <b>Open on its own</b>, then <b>Add photos</b> (or drag them onto the page). The photos stay in this browser on this computer; nothing is uploaded. They play in the frame, shared evenly across the song.</p></div>`:''}
   <div class="how"><h2>On the day</h2><ol><li>Open this page on the show laptop and connect the projector.</li><li>Press <b>Full screen</b> on the chosen option. The mouse pointer hides by itself.</li><li>It loops until you press <b>Esc</b>.</li></ol></div>`;
