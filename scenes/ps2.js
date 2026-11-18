@@ -81,7 +81,7 @@ draw(S){const c=S.ctx,st=S.state;S.bg('#b8e6ff','#fff4dc');
       else{c.globalAlpha=Math.min(1,(1-u)*2.2);S.at(sx,sy,Math.sin(u*9)*.2,.9+u*.9,()=>S.ink(st.hearts,'#ff8fb3',4));}
       c.globalAlpha=1;}
   });});}
- for(let i=0;i<14;i++){const x=(((i*140+o)%1960)+1960)%1960-40;c.fillStyle='#fff';c.strokeStyle=S.INK;c.lineWidth=4;c.beginPath();c.roundRect(x,945,70,16,8);c.fill();c.stroke();}
+ for(let i=0;i<14;i++){const x=(((i*1920/14+o)%1920)+1920)%1920-40;c.fillStyle='#fff';c.strokeStyle=S.INK;c.lineWidth=4;c.beginPath();c.roundRect(x,945,70,16,8);c.fill();c.stroke();}
 }});
 
 /* ---------- 3: duck pond ---------- */

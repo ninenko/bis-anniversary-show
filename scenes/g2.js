@@ -36,7 +36,7 @@ draw(S){const c=S.ctx,st=S.state;S.bg('#1c0f45','#2b1366','#40197a');
  c.globalAlpha=1;
  const bp=S.pulse(BEAT,0,3);c.lineCap='round';c.lineJoin='round';
  for(const w of st.waves){const ph=TAU*S.saw(Math.abs(w.sec))*Math.sign(w.sec)+w.o*TAU;const amp=w.amp*(1+.12*bp);
-  c.beginPath();for(let x=-40;x<=1960;x+=24){const y=w.y+amp*Math.sin(x*w.k*TAU+ph)*(0.6+0.4*Math.sin(x*.0021+ph*.5))*(1-.35*Math.max(0,(w.y-500))/500);x<0?c.moveTo(x,y):c.lineTo(x,y)}
+  c.beginPath();for(let x=-40;x<=1960;x+=24){const y=w.y+amp*Math.sin(x*w.k*TAU+ph)*(0.6+0.4*Math.sin(x*.0021+ph))*(1-.35*Math.max(0,(w.y-500))/500);x<0?c.moveTo(x,y):c.lineTo(x,y)}
   c.strokeStyle='rgba(0,0,0,.22)';c.lineWidth=w.w+10;c.stroke();c.strokeStyle=w.col;c.lineWidth=w.w;c.stroke();
   c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=7;c.stroke()}
  for(const d of st.dots){const y=S.wrap(d.y,d.sec,1080,30,-1);c.globalAlpha=.4+.5*S.osc01(d.ts,d.o);c.fillStyle=d.col;c.beginPath();c.arc(d.x,y,d.r*(1+.3*bp),0,TAU);c.fill()}

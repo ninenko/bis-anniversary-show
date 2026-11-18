@@ -86,12 +86,13 @@ BIS.scene('g7y-2',{title:'Turning Together',blurb:'Colourful interlocking gears 
   for(let i=1;i<g.length;i++){const G=g[i],P=g[G.p];th[i]=G.a+Math.PI+Math.PI/G.n-(th[G.p]-G.a)*P.n/G.n}
   for(let i=0;i<g.length;i++){
     const G=g[i];c.save();c.translate(G.x,G.y);c.rotate(th[i]);
-    const gr=c.createLinearGradient(-G.r,-G.r,G.r,G.r);gr.addColorStop(0,G.col[1]);gr.addColorStop(1,G.col[0]);
+    const ca=Math.cos(-th[i]),sa=Math.sin(-th[i]),ex=G.r*(ca-sa),ey=G.r*(sa+ca);const gr=c.createLinearGradient(-ex,-ey,ex,ey);// light stays fixed while gear turnsgr.addColorStop(0,G.col[1]);gr.addColorStop(1,G.col[0]);
     c.fillStyle=gr;c.fill(G.path);
     c.fillStyle='rgba(255,255,255,.14)';c.beginPath();c.arc(0,0,G.r*.82,0,TAU);c.fill();
     c.fillStyle='rgba(16,28,61,.32)';c.beginPath();c.arc(0,0,G.r*.66,0,TAU);c.fill();
     // spokes
-    c.fillStyle=G.col[0];const sp=Math.max(5,Math.round(G.n/4));
+    c.fillStyle=G.col[0];// spoke count chosen so the gear's turn per loop (96/n rev) is a whole number of spoke steps → seamless
+    const gcd=(a,b)=>b?gcd(b,a%b):a,q=G.n/gcd(96,G.n);let sp=q<=1?6:q;while(sp<4)sp*=2;if(sp>8)sp=0;
     for(let k=0;k<sp;k++){c.save();c.rotate(k/sp*TAU);c.fillRect(-G.r*.07,0,G.r*.14,G.r*.66);c.restore()}
     c.fillStyle=G.col[1];c.beginPath();c.arc(0,0,G.r*.2,0,TAU);c.fill();
     c.fillStyle='#16224a';c.beginPath();c.arc(0,0,G.r*.09,0,TAU);c.fill();
